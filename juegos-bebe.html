@@ -1897,7 +1897,7 @@ var beatG={id:'ritmo',name:['Ritmo','Rhythm'],icon:'🥁',col:'#ef6c00',bg:['#ff
 
 /* --- Dibujar libre con el dedo --- */
 var PAL=COLORS.concat([{es:'café',en:'brown',c:'#6d4c41'},{es:'negro',en:'black',c:'#212121'}]);
-var drawG={id:'dibujar',name:['Dibujar','Drawing'],icon:'🖌️',col:'#ec407a',bg:['#fce4ec','#f8bbd0'],
+var drawG={id:'dibujar',noMix:true,name:['Dibujar','Drawing'],icon:'🖌️',col:'#ec407a',bg:['#fce4ec','#f8bbd0'],
   start:function(){this.t=0;this.first=true;this.st=[];},
   newTask:function(){
     this.st=[];this.cur=null;this.ci=ri(0,PAL.length-1);this.done=false;this.lock=0.4;this.layout();
@@ -2246,7 +2246,8 @@ var BACK={name:['Atrás','Back'],icon:'⬅️',col:'#90a4ae',back:true};
 function isOn(gm){return cfg.off.indexOf(gm.id)<0;}
 /* se puede jugar ahora: visible y, si es solo de español ("(ES)"), no con el idioma en solo inglés */
 function playable(gm){return isOn(gm)&&!(cfg.lang==='en'&&/\(ES\)/.test(gm.name[1]));}
-function onGames(){var l=GAMES.filter(playable);return l.length?l:GAMES;}
+/* juegos del modo ¡Sin parar! (noMix: dibujar libre no tiene final, no entra) */
+function onGames(){var l=GAMES.filter(function(gm){return playable(gm)&&!gm.noMix;});return l.length?l:GAMES;}
 
 /* ================= sonido ambiental inmersivo (sintetizado: no pesa nada) =================
    Suena en menú, juegos, álbum y descanso; baja casi a cero mientras habla la voz para no competir
