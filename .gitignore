@@ -1,0 +1,10 @@
+# Solo se publica la app (GitHub Pages); lo demás se queda local
+/*
+!/.gitignore
+!/index.html
+!/juegos-bebe.html
+!/manifest.webmanifest
+!/sw.js
+!/icono-180.png
+!/icono-192.png
+!/icono-512.png
