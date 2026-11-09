@@ -2594,11 +2594,12 @@ var INST={ev:null,
   ios:null,
   ok:function(){try{if(this.ios===null)this.ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Mac/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);if(!/^https?:$/.test(location.protocol)||window.top!==window||navigator.standalone||
     matchMedia('(display-mode: standalone),(display-mode: fullscreen)').matches)return false;}catch(e){return false;}
-    return !!this.ev||this.ios;},
+    return true;},
   go:function(){var self=this;
     if(this.ev)ask('Instala los juegos en este teléfono: quedan con su ícono y funcionan sin internet.','',function(v){
       if(v&&self.ev){self.ev.prompt();self.ev.userChoice.then(function(){self.ev=null;if(scene===menu)menu.layout();});}},'📲 Instalar');
-    else ask('Para instalar en iPhone/iPad: toca el botón Compartir (el cuadrito con flecha ⬆️) y luego “Agregar a inicio”.','',function(){},'Entendido');}};
+    else if(this.ios)ask('Para instalar en iPhone/iPad: toca el botón Compartir (el cuadrito con flecha ⬆️) y luego “Agregar a inicio”.','',function(){},'Entendido');
+    else ask('Para instalar: abre el menú del navegador (⋮ arriba a la derecha) y elige “Instalar app” o “Agregar a pantalla de inicio”.','',function(){},'Entendido');}};
 try{addEventListener('beforeinstallprompt',function(e){e.preventDefault();INST.ev=e;if(scene===menu)menu.layout();});
   addEventListener('appinstalled',function(){INST.ev=null;INST.ios=false;if(scene===menu)menu.layout();});}catch(e){}
 var menu={tiles:[],t:0,cur:null,
