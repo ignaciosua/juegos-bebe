@@ -2589,14 +2589,28 @@ var album={t:0,items:[],back:{x:34,y:40,r:26},cur:0,tabs:[],drag:null,
 };
 
 /* ================= menú ================= */
+/* botón "Instalar app": solo servida por http(s), fuera de iframes (el artifact no puede) y si aún no está instalada */
+var INST={ev:null,
+  ios:null,
+  ok:function(){try{if(this.ios===null)this.ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Mac/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);if(!/^https?:$/.test(location.protocol)||window.top!==window||navigator.standalone||
+    matchMedia('(display-mode: standalone),(display-mode: fullscreen)').matches)return false;}catch(e){return false;}
+    return !!this.ev||this.ios;},
+  go:function(){var self=this;
+    if(this.ev)ask('Instala los juegos en este teléfono: quedan con su ícono y funcionan sin internet.','',function(v){
+      if(v&&self.ev){self.ev.prompt();self.ev.userChoice.then(function(){self.ev=null;if(scene===menu)menu.layout();});}},'📲 Instalar');
+    else ask('Para instalar en iPhone/iPad: toca el botón Compartir (el cuadrito con flecha ⬆️) y luego “Agregar a inicio”.','',function(){},'Entendido');}};
+try{addEventListener('beforeinstallprompt',function(e){e.preventDefault();INST.ev=e;if(scene===menu)menu.layout();});
+  addEventListener('appinstalled',function(){INST.ev=null;INST.ios=false;if(scene===menu)menu.layout();});}catch(e){}
 var menu={tiles:[],t:0,cur:null,
   list:function(){if(this.cur)return [BACK].concat(this.cur.g.filter(playable));return [mixG].concat(CATS.filter(function(c){return c.g.some(playable);})).concat([null]);},
   lock:Hold('🔒',2,function(){go(parent);}),
   enter:function(){this.t=0;this.layout();if(!menu.hi){menu.hi=1;speak(L('¡Hola! Soy Lulú. ¡Vamos a jugar!',"Hi! I'm Lulu. Let's play!"));}},
   layout:function(){
     var list=this.list(),n=list.length,cols=W>H*1.1?4:(n>8?3:2),rows=Math.ceil(n/cols),gap=12,top=HB;
-    var cw=(W-gap*(cols+1))/cols,ch=Math.min((H-top-gap*(rows+1))/rows,cw*1.05);
-    var oy=top+(H-top-(rows*ch+(rows+1)*gap))/2;
+    var ib=!this.cur&&INST.ok()?52:0,HH=H-ib;
+    this.inst=ib?{w:Math.min(260,W-40),h:40}:null;if(ib){this.inst.x=(W-this.inst.w)/2;this.inst.y=H-46;}
+    var cw=(W-gap*(cols+1))/cols,ch=Math.min((HH-top-gap*(rows+1))/rows,cw*1.05);
+    var oy=top+(HH-top-(rows*ch+(rows+1)*gap))/2;
     this.tiles=[];
     for(var i=0;i<n;i++){var r=Math.floor(i/cols),c=i%cols;
       this.tiles.push({x:gap+c*(cw+gap),y:oy+gap+r*(ch+gap),w:cw,h:ch,gm:list[i],p:0});}
@@ -2627,8 +2641,10 @@ var menu={tiles:[],t:0,cur:null,
     }
     drawHold(this.lock);
     if(PROF.list.length>1)emo(PROF.list[PROF.cur].e,30,HB/2,30);
+    var b=this.inst;if(b){rr(b.x,b.y,b.w,b.h,20);g.fillStyle='#bf360c';g.fill();txt('📲 '+word('Instalar app','Install app'),W/2,b.y+b.h/2,17,'#fff');}
   },
   down:function(x,y,pid){
+    var b=this.inst;if(b&&x>=b.x&&x<=b.x+b.w&&y>=b.y-6&&y<=b.y+b.h+6){SFX.pop(700);INST.go();return;}
     if(cfg.limit>0&&playTime>=cfg.limit*60){go(rest);return;}
     for(var i=0;i<this.tiles.length;i++){var tl=this.tiles[i];
       if(x>=tl.x&&x<=tl.x+tl.w&&y>=tl.y&&y<=tl.y+tl.h){tl.p=1;SFX.pop(700);
@@ -2941,7 +2957,8 @@ menu.hold=menu.lock;
 function W2(a,b){return word(a,b);}
 menu.targets=function(){var l=this.tiles.map(function(tl){return {x:tl.x+tl.w/2,y:tl.y+tl.h/2,w:tl.w,h:tl.h,
     label:tl.gm?W2(tl.gm.name[0],tl.gm.name[1]):'Stickers'};});
-  l.push({x:this.lock.x,y:this.lock.y,r:this.lock.r,label:'Zona de papás: mantén presionado'});return l;};
+  l.push({x:this.lock.x,y:this.lock.y,r:this.lock.r,label:'Zona de papás: mantén presionado'});
+  var b=this.inst;if(b)l.push({x:b.x+b.w/2,y:b.y+b.h/2,w:b.w,h:b.h,label:W2('Instalar app','Install app')});return l;};
 P.targets=function(){var l=[{x:this.home.x,y:this.home.y,r:this.home.r,label:W2('Menú: mantén presionado','Menu: hold')},
   {x:this.spk.x,y:this.spk.y,r:this.spk.r,label:W2('Repetir','Repeat')}];
   return l.concat(this.mod.targets?this.mod.targets():[]);};
