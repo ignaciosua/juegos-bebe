@@ -372,15 +372,20 @@ function weighPick(id,list,keyf){if(!list.length)return null;var w=list.map(func
 function makeFind(o){
   var m={pool:o.pool,praise:o.praise,ask:o.ask||askL,id:o.id,name:o.name,icon:o.icon,col:o.col,bg:o.bg,items:[],tgt:null,errs:0,lock:0,done:false,last:null,lastSay:-9,t:0,hint:false,tcol:'#42a5f5'};
   m.start=function(){m.last=null;};
+  /* "ya se presentó" (cfg.intro['seen|juego|clave']); papás lo pueden reiniciar. Independiente del historial de aciertos */
+  m.sk=function(d){return 'seen|'+o.id+'|'+(o.key?o.key(d):d.w);};
+  m.seen=function(d){return !!(cfg.intro||{})[m.sk(d)];};
   m.newTask=function(){
     var n=[2,3,4][lvl(o.id)],tgt,others;
     if(o.choose){var ch=o.choose(n,m.last);tgt=ch[0];others=ch[1];}
     else{var base=o.ok?o.pool.filter(o.ok):o.pool;
       var cand=base.filter(function(d){return d!==m.last;});
       /* ya hubo 2 palabras nuevas en esta ronda: repasa las que ya conoce (si hay) en vez de presentar otra */
-      if(!o.notrack&&P.intros>=2){var seen=cand.filter(function(d){return cfg.st[o.id+'|'+(o.key?o.key(d):d.w)];});if(seen.length)cand=seen;}
+      if(!o.notrack&&P.intros>=2){var seen=cand.filter(m.seen);if(seen.length)cand=seen;}
       tgt=o.notrack?shuffle(cand)[0]:weighPick(o.id,cand,o.key);
-      others=shuffle(base.filter(function(d){return d!==tgt;})).slice(0,n-1);}
+      /* opciones: primero las que ya se presentaron (las nuevas entran como pregunta, presentadas) */
+      var rest=shuffle(base.filter(function(d){return d!==tgt;}));
+      others=rest.filter(m.seen).concat(rest.filter(function(d){return !m.seen(d);})).slice(0,n-1);}
     m.items=shuffle([tgt].concat(others)).map(function(d,i){return {d:d,x:0,y:0,r:50,sc:0,del:i*0.08,wob:0,win:0,fade:1};});
     m.tgt=tgt;m.last=tgt;m.errs=0;m.done=false;m.lock=0.45;m.hint=false;
     m.tcol=pick(['#42a5f5','#ab47bc','#ef5350','#26a69a','#ff7043']);
@@ -392,6 +397,9 @@ function makeFind(o){
     if(iv&&!iv.need&&reNeed(m.rk))iv.need=true;
     m.pres=!!(iv&&iv.need);if(m.pres)reShown(m.rk);
     var st=m.pres?(iv.steps||[{say:iv.say,show:iv.show}]):[];
+    /* palabras: cada opción que nunca se ha presentado se presenta sola, en el orden de la pantalla (la pregunta, al final) */
+    if(o.intro===undefined&&!o.notrack){st=[];m.items.forEach(function(it){var d=it.d;
+      if(d===tgt?m.pres:!m.seen(d)){var v=d===tgt?iv:m.defIntro(d);st.push({say:v.say,show:v.show});cfg.intro[m.sk(d)]=1;}});if(st.length)save();}
     if(m.pres){P.intros=(P.intros|0)+1;dayRec().cn=dayRec().cn||[];if(iv.name&&dayRec().cn.indexOf(iv.name)<0)dayRec().cn.push(iv.name);}
     /* nameAll: juegos de sonido (inicio, rimas): antes de preguntar nombra cada opción, una por una, en el orden de la pantalla */
     if(o.preSteps){var ps=o.preSteps(tgt,others);if(ps)st=st.concat(ps);}
@@ -399,8 +407,8 @@ function makeFind(o){
     if(st.length){m.ph='intro';m.iv={key:m.pres?iv.key:null,steps:st};m.isi=0;m.introStep();}
     else{m.ph='ask';P.say(m.ask(tgt));}
   };
-  m.defIntro=function(d){if(o.notrack)return null;var k=o.key?o.key(d):d.w;
-    return {name:d.w,need:!cfg.st[o.id+'|'+k],say:o.introSay?o.introSay(d):L('¡Mira! '+cap(d.q||d.w)+'.','Look! '+cap(d.qe||d.we)+'.'),show:[{d:d,l:o.label?o.label(d):word(d.w,d.we)}]};};
+  m.defIntro=function(d){if(o.notrack)return null;
+    return {name:d.w,need:!m.seen(d),say:o.introSay?o.introSay(d):L('¡Mira! '+cap(d.q||d.w)+'.','Look! '+cap(d.qe||d.we)+'.'),show:[{d:d,l:o.label?o.label(d):word(d.w,d.we)}]};};
   /* un paso de la presentación; con iv.steps cada estado sale solo en pantalla, con su frase */
   m.introStep=function(){var st=m.iv.steps?m.iv.steps[m.isi]:m.iv;m.wt=0;
     m.ivs=st.show.map(function(q,i){return {d:q.d,l:q.l,sc:0,del:0.15+i*0.45};});P.say(st.say);};
@@ -682,7 +690,7 @@ var molesG={id:'topos',name:['Topos','Peekaboo'],icon:'🐹',col:'#a1887f',bg:['
     this.layout();
     /* animal que aún no conoce: primero se presenta solo, luego se esconde en los hoyos */
     var w=this.tgt.w,k='topo|'+w;this.ph='play';this.rk=k;
-    if((!cfg.st['animales|'+w]&&!((cfg.intro||{})[k]))||reNeed(k)){cfg.intro[k]=1;reShown(k);this.ph='intro';this.wt=0;P.say(animalsG.defIntro(this.tgt).say);}
+    if(!cfg.intro['seen|animales|'+w]||reNeed(k)){cfg.intro['seen|animales|'+w]=1;reShown(k);this.ph='intro';this.wt=0;P.say(animalsG.defIntro(this.tgt).say);}
     else P.say(askL(this.tgt));
   },
   layout:function(){grid(this.holes,10,TOP+30,W-20,H-TOP-80);for(var i=0;i<this.holes.length;i++)this.holes[i].r*=0.72;},
@@ -2828,6 +2836,10 @@ var parent=scrollable({btns:[],tips:[],sc:0,
     b.push({x:x0+hw+gap,y:y,w:hw,h:bh,tf:function(){return cfg.calm?'🌿 Poco movimiento: sí':'🌿 Poco movimiento: no';},act:function(){cfg.calm=!cfg.calm;save();}});
     y+=bh+gap;
     b.push({x:x0,y:y,w:w,h:bh,tf:function(){return cfg.hand?'☝️ Manita que enseña: sí':'☝️ Manita que enseña: no';},act:function(){cfg.hand=!cfg.hand;save();}});
+    y+=bh+gap;
+    /* olvida qué se presentó (palabras, conceptos, ejemplos): todo se vuelve a presentar; el avance y los stickers se quedan */
+    b.push({x:x0,y:y,w:w,h:bh,t:'🔄 Volver a presentar todo',act:function(){
+      ask('¿Volver a presentar todas las palabras, conceptos y ejemplos desde el principio? El avance y los stickers se quedan.','',function(v){if(v){cfg.intro={};cfg.heard={};save();SFX.ding();}},true);}});
     y+=bh+gap;
     b.push({x:x0,y:y,w:w,h:bh,tf:function(){return cfg.amb?'🌳 Sonido ambiental: sí':'🌳 Sonido ambiental: no';},act:function(){cfg.amb=!cfg.amb;save();}});
     y+=bh+gap;
